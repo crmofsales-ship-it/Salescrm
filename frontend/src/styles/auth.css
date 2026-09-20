@@ -1,0 +1,161 @@
+/* ============================================================================
+   Sales CRM — authentication & onboarding design system
+   Self-contained; independent of the legacy CRM stylesheet. Theme-aware via
+   the [data-theme] attribute set on <html> by ThemeContext.
+   ============================================================================ */
+
+.sc-auth {
+  --sc-bg:        #FBFBFA;
+  --sc-panel:     #F4F3F1;
+  --sc-card:      #FFFFFF;
+  --sc-ink:       #18181B;
+  --sc-ink-soft:  #52525B;
+  --sc-ink-faint: #A1A1AA;
+  --sc-line:      #E7E5E4;
+  --sc-line-2:    #D6D3D1;
+  --sc-accent:    #059669;
+  --sc-accent-ink:#FFFFFF;
+  --sc-accent-wash:#E7F6F0;
+  --sc-danger:    #DC2626;
+  --sc-ok:        #16A34A;
+  --sc-radius:    14px;
+  --sc-shadow:    0 1px 2px rgba(24,24,27,.04), 0 12px 40px -12px rgba(24,24,27,.14);
+  --sc-font: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  background: var(--sc-bg);
+  color: var(--sc-ink);
+  font-family: var(--sc-font);
+  overflow: auto;
+}
+
+[data-theme="dark"] .sc-auth {
+  --sc-bg:        #0A0A0B;
+  --sc-panel:     #111113;
+  --sc-card:      #161618;
+  --sc-ink:       #FAFAFA;
+  --sc-ink-soft:  #A1A1AA;
+  --sc-ink-faint: #71717A;
+  --sc-line:      #262629;
+  --sc-line-2:    #333338;
+  --sc-accent:    #34D399;
+  --sc-accent-ink:#04140E;
+  --sc-accent-wash:#0E2A22;
+  --sc-shadow:    0 1px 2px rgba(0,0,0,.4), 0 20px 50px -12px rgba(0,0,0,.6);
+}
+
+/* ── brand panel ─────────────────────────────────────────────────────────── */
+.sc-auth__aside {
+  position: relative;
+  padding: 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background:
+    radial-gradient(120% 80% at 15% 10%, color-mix(in srgb, var(--sc-accent) 22%, transparent), transparent 60%),
+    radial-gradient(90% 60% at 90% 100%, color-mix(in srgb, var(--sc-accent) 12%, transparent), transparent 55%),
+    var(--sc-panel);
+  border-right: 1px solid var(--sc-line);
+  overflow: hidden;
+}
+.sc-brand { display: flex; align-items: center; gap: 11px; font-weight: 650; font-size: 16px; letter-spacing: -.01em; }
+.sc-brand__mark {
+  width: 30px; height: 30px; border-radius: 9px;
+  background: var(--sc-accent); color: var(--sc-accent-ink);
+  display: grid; place-items: center; font-size: 15px; font-weight: 800;
+  box-shadow: 0 4px 14px -4px color-mix(in srgb, var(--sc-accent) 60%, transparent);
+}
+.sc-aside__body { max-width: 30ch; }
+.sc-aside__title { font-size: 34px; line-height: 1.12; font-weight: 680; letter-spacing: -.03em; margin: 0 0 14px; }
+.sc-aside__text { font-size: 14.5px; line-height: 1.6; color: var(--sc-ink-soft); margin: 0; }
+.sc-aside__points { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 12px; }
+.sc-aside__points li { display: flex; gap: 10px; align-items: center; font-size: 13.5px; color: var(--sc-ink-soft); }
+.sc-aside__points li::before {
+  content: ""; width: 16px; height: 16px; flex: none; border-radius: 5px;
+  background: var(--sc-accent-wash);
+  border: 1px solid color-mix(in srgb, var(--sc-accent) 35%, transparent);
+}
+.sc-aside__foot { font-size: 12px; color: var(--sc-ink-faint); }
+
+/* ── form side ───────────────────────────────────────────────────────────── */
+.sc-auth__main { display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+.sc-form { width: 100%; max-width: 380px; }
+.sc-form__head { margin-bottom: 26px; }
+.sc-form__title { font-size: 23px; font-weight: 660; letter-spacing: -.02em; margin: 0 0 6px; }
+.sc-form__sub { font-size: 13.5px; color: var(--sc-ink-soft); margin: 0; }
+.sc-form__sub a { color: var(--sc-accent); font-weight: 550; text-decoration: none; }
+.sc-form__sub a:hover { text-decoration: underline; }
+
+.sc-field { margin-bottom: 14px; }
+.sc-field__label { display: block; font-size: 12.5px; font-weight: 550; color: var(--sc-ink-soft); margin-bottom: 6px; }
+.sc-input-wrap { position: relative; display: flex; align-items: center; }
+.sc-input {
+  width: 100%; height: 42px; padding: 0 12px; font-size: 14px; font-family: inherit;
+  color: var(--sc-ink); background: var(--sc-card);
+  border: 1px solid var(--sc-line-2); border-radius: 10px; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.sc-input::placeholder { color: var(--sc-ink-faint); }
+.sc-input:focus { border-color: var(--sc-accent); box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--sc-accent) 18%, transparent); }
+.sc-input--has-btn { padding-right: 42px; }
+.sc-input-btn {
+  position: absolute; right: 6px; width: 30px; height: 30px; display: grid; place-items: center;
+  background: none; border: none; cursor: pointer; color: var(--sc-ink-faint); border-radius: 7px;
+}
+.sc-input-btn:hover { color: var(--sc-ink-soft); background: var(--sc-panel); }
+
+.sc-row { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 18px; }
+.sc-check { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--sc-ink-soft); cursor: pointer; }
+.sc-check input { accent-color: var(--sc-accent); width: 14px; height: 14px; }
+.sc-link { background: none; border: none; padding: 0; font: inherit; font-size: 12.5px; color: var(--sc-accent); font-weight: 550; cursor: pointer; }
+.sc-link:hover { text-decoration: underline; }
+
+.sc-btn {
+  width: 100%; height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 14px; font-weight: 600; font-family: inherit; border-radius: 10px; cursor: pointer;
+  border: 1px solid transparent; transition: transform .08s, filter .15s, background .15s;
+}
+.sc-btn:active { transform: translateY(1px); }
+.sc-btn[disabled] { opacity: .55; cursor: not-allowed; }
+.sc-btn--primary { background: var(--sc-accent); color: var(--sc-accent-ink); }
+.sc-btn--primary:not([disabled]):hover { filter: brightness(1.06); }
+.sc-btn--ghost { background: var(--sc-card); color: var(--sc-ink); border-color: var(--sc-line-2); }
+.sc-btn--ghost:not([disabled]):hover { background: var(--sc-panel); }
+
+.sc-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: var(--sc-ink-faint); font-size: 12px; }
+.sc-divider::before, .sc-divider::after { content: ""; height: 1px; flex: 1; background: var(--sc-line); }
+
+.sc-alert {
+  display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.45;
+  padding: 10px 12px; border-radius: 9px; margin-bottom: 16px;
+}
+.sc-alert--error { background: color-mix(in srgb, var(--sc-danger) 10%, transparent); color: var(--sc-danger); }
+.sc-alert--ok { background: color-mix(in srgb, var(--sc-ok) 12%, transparent); color: var(--sc-ok); }
+
+.sc-strength { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.sc-strength__track { display: flex; gap: 4px; flex: 1; }
+.sc-strength__seg { height: 3px; flex: 1; border-radius: 2px; background: var(--sc-line-2); transition: background .2s; }
+.sc-strength__label { font-size: 11px; font-weight: 550; }
+
+/* ── onboarding ──────────────────────────────────────────────────────────── */
+.sc-onb { min-height: 100vh; background: var(--sc-bg); color: var(--sc-ink); font-family: var(--sc-font);
+  display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+.sc-onb__card { width: 100%; max-width: 460px; background: var(--sc-card); border: 1px solid var(--sc-line);
+  border-radius: 18px; box-shadow: var(--sc-shadow); padding: 34px; }
+.sc-steps { display: flex; gap: 6px; margin-bottom: 26px; }
+.sc-steps__dot { height: 3px; flex: 1; border-radius: 2px; background: var(--sc-line-2); }
+.sc-steps__dot--on { background: var(--sc-accent); }
+.sc-logo-drop {
+  width: 84px; height: 84px; border-radius: 16px; border: 1.5px dashed var(--sc-line-2);
+  display: grid; place-items: center; cursor: pointer; overflow: hidden; background: var(--sc-panel);
+  color: var(--sc-ink-faint); font-size: 12px; text-align: center;
+}
+.sc-logo-drop img { width: 100%; height: 100%; object-fit: cover; }
+
+@media (max-width: 880px) {
+  .sc-auth { grid-template-columns: 1fr; position: static; min-height: 100vh; }
+  .sc-auth__aside { display: none; }
+}

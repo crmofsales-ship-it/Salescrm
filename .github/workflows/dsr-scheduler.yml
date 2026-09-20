@@ -1,0 +1,90 @@
+name: DSR & Inactivity Alert Scheduler
+
+on:
+  schedule:
+    # Runs every 30 minutes — each endpoint checks its own IST time slot internally.
+    # DSR fires at 07:30 PM IST slot (14:10 UTC target = 7:40 PM IST).
+    # Daily Planning Report fires at 10:30 AM IST slot (05:00 UTC target = 10:30 AM IST).
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      force_dsr:
+        description: 'Force DSR to send now regardless of time slot (test mode)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+      force_daily_planning:
+        description: 'Force Daily Planning Report to send now (test mode)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+jobs:
+  trigger-scheduler:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger DSR scheduler cron (custom per-user schedules)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            ${{ secrets.BACKEND_URL }}/api/reports/scheduler-cron)
+          echo "DSR scheduler response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "WARNING: DSR scheduler cron returned non-200 status: $STATUS"
+          fi
+
+      - name: Trigger role-based daily DSR cron (7:40 PM IST)
+        run: |
+          FORCE="${{ github.event.inputs.force_dsr || 'false' }}"
+          if [ "$FORCE" = "true" ]; then
+            URL="${{ secrets.BACKEND_URL }}/api/reports/role-dsr-cron?force=true"
+            echo ">>> FORCED TEST RUN — bypassing time-slot check <<<"
+          else
+            URL="${{ secrets.BACKEND_URL }}/api/reports/role-dsr-cron"
+          fi
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "$URL")
+          echo "Role DSR cron response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "WARNING: Role DSR cron returned non-200 status: $STATUS"
+          fi
+
+      - name: Trigger comprehensive inactivity cron (11:00 AM IST)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            ${{ secrets.BACKEND_URL }}/api/reports/comprehensive-inactivity-cron)
+          echo "Comprehensive inactivity cron response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "WARNING: Comprehensive inactivity cron returned non-200 status: $STATUS"
+          fi
+
+      - name: Trigger lead inactivity cron (09:00 AM IST)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            ${{ secrets.BACKEND_URL }}/api/reports/lead-inactivity-cron)
+          echo "Lead inactivity cron response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "WARNING: Lead inactivity cron returned non-200 status: $STATUS"
+          fi
+
+      - name: Trigger daily planning report cron (10:30 AM IST)
+        run: |
+          FORCE="${{ github.event.inputs.force_daily_planning || 'false' }}"
+          if [ "$FORCE" = "true" ]; then
+            URL="${{ secrets.BACKEND_URL }}/api/reports/daily-planning-cron?force=true"
+            echo ">>> FORCED TEST RUN — bypassing time-slot check <<<"
+          else
+            URL="${{ secrets.BACKEND_URL }}/api/reports/daily-planning-cron"
+          fi
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "$URL")
+          echo "Daily planning cron response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "WARNING: Daily planning cron returned non-200 status: $STATUS"
+          fi
