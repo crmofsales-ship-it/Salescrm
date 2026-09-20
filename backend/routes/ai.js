@@ -729,15 +729,7 @@ async function executeTool(name, args, ctx) {
 
   // ── create_lead ──────────────────────────────────────────────────────────────
   if (name === "create_lead") {
-    const { data: existingCodes } = await db.from("leads").select("lead_code").not("lead_code", "is", null);
-    let maxCode = 0;
-    (existingCodes || []).forEach(r => {
-      const n = parseInt((r.lead_code || "").replace(/\D/g, ""), 10);
-      if (!isNaN(n) && n > maxCode) maxCode = n;
-    });
-    const leadCode = `LEAD-${String(maxCode + 1).padStart(3, "0")}`;
     const payload = {
-      lead_code:    leadCode,
       company_name: args.company_name,
       contact_name: args.contact_name,
       phone:        args.phone || null,

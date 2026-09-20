@@ -19,15 +19,9 @@ const calcAiScore = (budget, source) => {
   return Math.min(score, 100);
 };
 
-async function nextLeadCode(db) {
-  const { data } = await db.from("leads").select("lead_code").not("lead_code", "is", null);
-  let max = 0;
-  (data || []).forEach((r) => {
-    const n = parseInt((r.lead_code || "").replace(/\D/g, ""), 10);
-    if (!isNaN(n) && n > max) max = n;
-  });
-  return `LEAD-${String(max + 1).padStart(3, "0")}`;
-}
+// lead_code (LEAD-001 …) is assigned per organization by the database trigger
+// fn_set_lead_code — it must see every lead in the org, which a row-level-secured
+// caller cannot, so the API never computes it.
 
 // GET /api/leads
 router.get("/", async (req, res) => {
@@ -83,14 +77,13 @@ router.post("/", async (req, res) => {
   }
 
   const ai_score = calcAiScore(Number(budget) || 0, source);
-  const lead_code = await nextLeadCode(req.db);
   const finalAssignedTo = req.orgRole === "sales_rep" ? profileId : (assigned_to || profileId);
 
   const { data, error } = await req.db
     .from("leads")
     .insert({
       ...rest, contact_name: rest.contact_name ?? "", budget: Number(budget) || 0, source,
-      ai_score, lead_code, assigned_to: finalAssignedTo, created_by: profileId,
+      ai_score, assigned_to: finalAssignedTo, created_by: profileId,
       organization_id: req.organizationId,
     })
     .select().single();
@@ -98,8 +91,8 @@ router.post("/", async (req, res) => {
 
   req.db.from("activities").insert({
     type: "note",
-    title: `Lead created: ${data.contact_name || data.company_name || lead_code}`,
-    description: `Lead created: ${data.contact_name || data.company_name || lead_code}`,
+    title: `Lead created: ${data.contact_name || data.company_name || data.lead_code}`,
+    description: `Lead created: ${data.contact_name || data.company_name || data.lead_code}`,
     lead_id: data.id, created_by: profileId, status: "done", organization_id: req.organizationId,
   }).then(() => {}).catch(() => {});
 
@@ -112,18 +105,11 @@ router.post("/bulk", requireOrgRole("sales_manager"), async (req, res) => {
   if (!Array.isArray(leads) || leads.length === 0) {
     return res.status(400).json({ error: "Body must be a non-empty array of leads" });
   }
-  const { data: codeData } = await req.db.from("leads").select("lead_code").not("lead_code", "is", null);
-  let maxCode = 0;
-  (codeData || []).forEach((r) => {
-    const n = parseInt((r.lead_code || "").replace(/\D/g, ""), 10);
-    if (!isNaN(n) && n > maxCode) maxCode = n;
-  });
-  const enriched = leads.map((l, i) => {
-    const { organization_id, ...clean } = l;
+  const enriched = leads.map((l) => {
+    const { organization_id, lead_code, ...clean } = l;
     return {
       ...clean,
       ai_score: calcAiScore(Number(l.budget) || 0, l.source),
-      lead_code: `LEAD-${String(maxCode + i + 1).padStart(3, "0")}`,
       created_by: req.profile.id,
       assigned_to: l.assigned_to || req.profile.id,
       organization_id: req.organizationId,
