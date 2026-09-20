@@ -20,4 +20,4 @@ CREATE TABLE IF NOT EXISTS user_oauth_tokens (
 ALTER TABLE user_oauth_tokens ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "user_oauth_tokens_own" ON user_oauth_tokens
-  USING (user_id IN (SELECT id FROM profiles WHERE firebase_uid = auth.uid()::text));
+  USING (user_id IN (SELECT id FROM profiles WHERE legacy_uid = auth.uid()::text));

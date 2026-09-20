@@ -1,5 +1,5 @@
 -- Fix DELETE and UPDATE policies for targets table
--- (auth.role() = 'authenticated' returns 'anon' for Firebase auth users)
+-- (auth.role() = 'authenticated' returns 'anon' for externally-authenticated users)
 
 DROP POLICY IF EXISTS "targets_delete" ON targets;
 CREATE POLICY "targets_delete" ON targets

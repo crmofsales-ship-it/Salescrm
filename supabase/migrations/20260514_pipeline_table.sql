@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS pipeline (
 
 ALTER TABLE pipeline ENABLE ROW LEVEL SECURITY;
 
--- Open policies (Firebase auth users appear as anon, app enforces RBAC)
+-- Open policies (externally-authenticated users appear as anon, app enforces RBAC)
 CREATE POLICY "pipeline_select" ON pipeline FOR SELECT USING (true);
 CREATE POLICY "pipeline_insert" ON pipeline FOR INSERT WITH CHECK (true);
 CREATE POLICY "pipeline_update" ON pipeline FOR UPDATE USING (true) WITH CHECK (true);

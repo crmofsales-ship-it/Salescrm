@@ -35,7 +35,7 @@ WHERE stage NOT IN ('new','contacted','meeting_scheduled','proposal_sent','negot
 -- Fix default
 ALTER TABLE deals ALTER COLUMN stage SET DEFAULT 'new';
 
--- ── 4. Fix targets RLS (Firebase UID ≠ Supabase auth.uid) ───
+-- ── 4. Fix targets RLS (external UID ≠ Supabase auth.uid) ───
 DROP POLICY IF EXISTS "targets_insert" ON targets;
 CREATE POLICY "targets_insert" ON targets
   FOR INSERT WITH CHECK (true);

@@ -30,11 +30,11 @@ DROP TABLE IF EXISTS profiles CASCADE;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================
--- PROFILES TABLE (linked to Firebase Auth via firebase_uid)
+-- PROFILES TABLE (linked to the auth provider via legacy_uid)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  firebase_uid TEXT UNIQUE NOT NULL,
+  legacy_uid TEXT UNIQUE NOT NULL,
   email TEXT UNIQUE NOT NULL,
   full_name TEXT,
   avatar_url TEXT,
@@ -303,7 +303,7 @@ CREATE INDEX IF NOT EXISTS idx_activities_created_at ON activities(created_at DE
 
 -- ============================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
--- Note: Since auth is Firebase (not Supabase Auth), we use
+-- Note: Since auth is handled outside Supabase Auth, we use
 -- service role key on backend for admin operations.
 -- On frontend with anon key, we keep policies permissive for
 -- organization members (all users in same org can read).
@@ -324,7 +324,7 @@ ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE files ENABLE ROW LEVEL SECURITY;
 
--- Allow anon key to read/write (since Firebase handles auth at app level)
+-- Allow anon key to read/write (since auth is handled at app level)
 -- Adjust these policies based on your security requirements
 CREATE POLICY "Allow all for anon" ON profiles FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON leads FOR ALL TO anon USING (true) WITH CHECK (true);
@@ -511,7 +511,7 @@ WHERE stage NOT IN ('new','contacted','meeting_scheduled','proposal_sent','negot
 -- Fix default
 ALTER TABLE deals ALTER COLUMN stage SET DEFAULT 'new';
 
--- ── 4. Fix targets RLS (Firebase UID ≠ Supabase auth.uid) ───
+-- ── 4. Fix targets RLS (external UID ≠ Supabase auth.uid) ───
 DROP POLICY IF EXISTS "targets_insert" ON targets;
 CREATE POLICY "targets_insert" ON targets
   FOR INSERT WITH CHECK (true);
@@ -649,7 +649,7 @@ CREATE TABLE IF NOT EXISTS pipeline (
 
 ALTER TABLE pipeline ENABLE ROW LEVEL SECURITY;
 
--- Open policies (Firebase auth users appear as anon, app enforces RBAC)
+-- Open policies (externally-authenticated users appear as anon, app enforces RBAC)
 CREATE POLICY "pipeline_select" ON pipeline FOR SELECT USING (true);
 CREATE POLICY "pipeline_insert" ON pipeline FOR INSERT WITH CHECK (true);
 CREATE POLICY "pipeline_update" ON pipeline FOR UPDATE USING (true) WITH CHECK (true);
@@ -725,7 +725,7 @@ CREATE INDEX IF NOT EXISTS idx_leads_stage ON leads(stage);
 
 -- ═══ 2. 20260514_targets_dml_fix.sql ═══
 -- Fix DELETE and UPDATE policies for targets table
--- (auth.role() = 'authenticated' returns 'anon' for Firebase auth users)
+-- (auth.role() = 'authenticated' returns 'anon' for externally-authenticated users)
 
 DROP POLICY IF EXISTS "targets_delete" ON targets;
 CREATE POLICY "targets_delete" ON targets
@@ -768,7 +768,7 @@ ALTER TABLE targets ADD COLUMN IF NOT EXISTS description TEXT;
 -- Fix: targets SELECT policy + team hierarchy support
 -- ============================================================
 
--- 1. Fix SELECT policy (was blocking Firebase auth users)
+-- 1. Fix SELECT policy (was blocking externally-authenticated users)
 DROP POLICY IF EXISTS "targets_select" ON targets;
 CREATE POLICY "targets_select" ON targets
   FOR SELECT USING (true);
@@ -837,7 +837,7 @@ CREATE POLICY "Users can insert own audit logs"
   ON audit_logs FOR INSERT
   TO authenticated
   WITH CHECK (user_id = auth.uid()::text::uuid OR user_id IN (
-    SELECT id FROM profiles WHERE firebase_uid = auth.uid()::text
+    SELECT id FROM profiles WHERE legacy_uid = auth.uid()::text
   ));
 
 DROP POLICY IF EXISTS "Admins can read audit logs" ON audit_logs;
@@ -847,7 +847,7 @@ CREATE POLICY "Admins can read audit logs"
   USING (
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE firebase_uid = auth.uid()::text
+      WHERE legacy_uid = auth.uid()::text
         AND role IN ('owner', 'sales_head')
     )
   );
@@ -1361,7 +1361,7 @@ CREATE TABLE IF NOT EXISTS user_oauth_tokens (
 ALTER TABLE user_oauth_tokens ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "user_oauth_tokens_own" ON user_oauth_tokens
-  USING (user_id IN (SELECT id FROM profiles WHERE firebase_uid = auth.uid()::text));
+  USING (user_id IN (SELECT id FROM profiles WHERE legacy_uid = auth.uid()::text));
 
 
 -- ═══ 3. 20260828_0050_aux_tables.sql ═══
@@ -1563,17 +1563,17 @@ CREATE INDEX IF NOT EXISTS idx_org_audit_org ON public.organization_audit_logs(o
 
 -- ═══ 3. 20260828_0200_supabase_auth.sql ═══
 -- ============================================================================
--- Part 2 of 5 — move authentication identity from Firebase to Supabase Auth.
+-- Part 2 of 5 — move authentication identity to Supabase Auth.
 --
 -- Strategy: keep profiles.id as the app-wide primary key (30+ tables already
 -- FK to it — we do NOT rewrite those). Add profiles.user_id -> auth.users(id)
--- as the new auth link. firebase_uid becomes nullable legacy data.
+-- as the new auth link. legacy_uid becomes nullable legacy data.
 -- ============================================================================
 
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE;
 
-ALTER TABLE public.profiles ALTER COLUMN firebase_uid DROP NOT NULL;
+ALTER TABLE public.profiles ALTER COLUMN legacy_uid DROP NOT NULL;
 
 -- Expand role check to the new 4-role model while tolerating legacy values
 -- until 0300 remaps them.

@@ -1,15 +1,15 @@
 -- ============================================================================
--- Part 2 of 5 — move authentication identity from Firebase to Supabase Auth.
+-- Part 2 of 5 — move authentication identity to Supabase Auth.
 --
 -- Strategy: keep profiles.id as the app-wide primary key (30+ tables already
 -- FK to it — we do NOT rewrite those). Add profiles.user_id -> auth.users(id)
--- as the new auth link. firebase_uid becomes nullable legacy data.
+-- as the new auth link. legacy_uid becomes nullable legacy data.
 -- ============================================================================
 
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE;
 
-ALTER TABLE public.profiles ALTER COLUMN firebase_uid DROP NOT NULL;
+ALTER TABLE public.profiles ALTER COLUMN legacy_uid DROP NOT NULL;
 
 -- Expand role check to the new 4-role model while tolerating legacy values
 -- until 0300 remaps them.

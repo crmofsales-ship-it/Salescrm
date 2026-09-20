@@ -2,7 +2,7 @@
 -- Fix: targets SELECT policy + team hierarchy support
 -- ============================================================
 
--- 1. Fix SELECT policy (was blocking Firebase auth users)
+-- 1. Fix SELECT policy (was blocking externally-authenticated users)
 DROP POLICY IF EXISTS "targets_select" ON targets;
 CREATE POLICY "targets_select" ON targets
   FOR SELECT USING (true);

@@ -23,11 +23,11 @@ DROP TABLE IF EXISTS profiles CASCADE;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================
--- PROFILES TABLE (linked to Firebase Auth via firebase_uid)
+-- PROFILES TABLE (linked to the auth provider via legacy_uid)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  firebase_uid TEXT UNIQUE NOT NULL,
+  legacy_uid TEXT UNIQUE NOT NULL,
   email TEXT UNIQUE NOT NULL,
   full_name TEXT,
   avatar_url TEXT,
@@ -296,7 +296,7 @@ CREATE INDEX IF NOT EXISTS idx_activities_created_at ON activities(created_at DE
 
 -- ============================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
--- Note: Since auth is Firebase (not Supabase Auth), we use
+-- Note: Since auth is handled outside Supabase Auth, we use
 -- service role key on backend for admin operations.
 -- On frontend with anon key, we keep policies permissive for
 -- organization members (all users in same org can read).
@@ -317,7 +317,7 @@ ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE files ENABLE ROW LEVEL SECURITY;
 
--- Allow anon key to read/write (since Firebase handles auth at app level)
+-- Allow anon key to read/write (since auth is handled at app level)
 -- Adjust these policies based on your security requirements
 CREATE POLICY "Allow all for anon" ON profiles FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON leads FOR ALL TO anon USING (true) WITH CHECK (true);

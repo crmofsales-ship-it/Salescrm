@@ -20,7 +20,7 @@ CREATE POLICY "Users can insert own audit logs"
   ON audit_logs FOR INSERT
   TO authenticated
   WITH CHECK (user_id = auth.uid()::text::uuid OR user_id IN (
-    SELECT id FROM profiles WHERE firebase_uid = auth.uid()::text
+    SELECT id FROM profiles WHERE legacy_uid = auth.uid()::text
   ));
 
 DROP POLICY IF EXISTS "Admins can read audit logs" ON audit_logs;
@@ -30,7 +30,7 @@ CREATE POLICY "Admins can read audit logs"
   USING (
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE firebase_uid = auth.uid()::text
+      WHERE legacy_uid = auth.uid()::text
         AND role IN ('owner', 'sales_head')
     )
   );
