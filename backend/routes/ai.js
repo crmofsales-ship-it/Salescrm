@@ -6,23 +6,25 @@ const { authenticate } = require("../middleware/auth");
 const { withOrg } = require("../middleware/orgContext");
 
 // ── Document RAG: search uploaded project docs ────────────────────────────────
-async function searchDocuments(query) {
+async function searchDocuments(db, query) {
+  // `db` is the caller's row-level-secured client, so only their organization's documents are visible.
   try {
-    const { count } = await supabase
-      .from("ai_documents")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "ready");
-    if (!count || count === 0) return null;
+    const { data: docs } = await db.from("ai_documents").select("id, name").eq("status", "ready");
+    if (!docs?.length) return null;
 
-    const { data, error } = await supabase.rpc("search_document_chunks", {
-      query_text:  query,
-      match_count: 5,
-    });
+    const terms = [...new Set(String(query || "").toLowerCase().match(/[a-z0-9]{4,}/g) || [])]
+      .sort((a, b) => b.length - a.length).slice(0, 4);
+    if (!terms.length) return null;
+
+    const names = Object.fromEntries(docs.map((d) => [d.id, d.name]));
+    const { data, error } = await db.from("ai_document_chunks")
+      .select("document_id, content")
+      .in("document_id", docs.map((d) => d.id))
+      .or(terms.map((t) => `content.ilike.%${t}%`).join(","))
+      .limit(5);
     if (error || !data?.length) return null;
 
-    return data
-      .map((c) => `[Source: ${c.document_name}]\n${c.content}`)
-      .join("\n\n---\n\n");
+    return data.map((c) => `[Source: ${names[c.document_id]}]\n${c.content}`).join("\n\n---\n\n");
   } catch {
     return null;
   }
@@ -1074,7 +1076,8 @@ router.post("/chat", authenticate, withOrg, async (req, res) => {
   if (!apiKey) return res.status(503).json({ error: "Groq API key not configured." });
 
   const userId = req.profile.id;
-  if (!conversationHistory[userId]) conversationHistory[userId] = [];
+  const historyKey = `${req.organizationId}:${userId}`; // history never crosses organizations
+  if (!conversationHistory[historyKey]) conversationHistory[historyKey] = [];
 
   // SSE headers
   res.setHeader("Content-Type", "text/event-stream");
@@ -1091,11 +1094,11 @@ router.post("/chat", authenticate, withOrg, async (req, res) => {
   try {
     const groq = new Groq({ apiKey });
 
-    const docContext = await searchDocuments(message);
+    const docContext = await searchDocuments(req.db, message);
 
     const messages = [
       { role: "system", content: buildSystemPrompt(req.profile, pageContext || null, docContext) },
-      ...conversationHistory[userId].slice(-10),
+      ...conversationHistory[historyKey].slice(-10),
       { role: "user", content: message },
     ];
 
@@ -1154,10 +1157,10 @@ router.post("/chat", authenticate, withOrg, async (req, res) => {
     }
 
     // Persist conversation (keep last 20 exchanges)
-    conversationHistory[userId].push({ role: "user",      content: message });
-    conversationHistory[userId].push({ role: "assistant", content: finalContent });
-    if (conversationHistory[userId].length > 20) {
-      conversationHistory[userId] = conversationHistory[userId].slice(-20);
+    conversationHistory[historyKey].push({ role: "user",      content: message });
+    conversationHistory[historyKey].push({ role: "assistant", content: finalContent });
+    if (conversationHistory[historyKey].length > 20) {
+      conversationHistory[historyKey] = conversationHistory[historyKey].slice(-20);
     }
 
     res.write("data: [DONE]\n\n");
@@ -1175,9 +1178,9 @@ router.post("/chat", authenticate, withOrg, async (req, res) => {
 
 // POST /api/ai/clear-history
 router.post("/clear-history", authenticate, withOrg, (req, res) => {
-  const userId = req.profile.id;
-  if (conversationHistory[userId]) {
-    conversationHistory[userId] = [];
+  const historyKey = `${req.organizationId}:${req.profile.id}`;
+  if (conversationHistory[historyKey]) {
+    conversationHistory[historyKey] = [];
   }
   res.json({ success: true });
 });
